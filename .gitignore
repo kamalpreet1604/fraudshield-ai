@@ -1,0 +1,16 @@
+# Kaggle competition data must not be shared publicly
+data/raw/*
+!data/raw/.gitkeep
+data/processed/
+*.zip
+
+# Python / env
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.env
+
+# Models and local DBs
+models/*.joblib
+*.db
