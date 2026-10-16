@@ -19,6 +19,20 @@ So I measure the model the way a fraud team would think about it:
 - how many of the top 50 or 100 alerts are really fraud, because an analyst can only review so many in a day
 - the total cost of a review threshold: missed fraud costs its amount, and every alert costs a fixed review cost
 
+## What I found in the data so far
+
+The data is about 590,000 real e-commerce transactions over roughly 6 months, and only 3.5% of them are fraud.
+
+- Transactions with device information are about 4 times more likely to be fraud (7.96%) than those without (2.10%).
+- Fraud payments are only slightly larger than genuine ones (median $75 vs $68.50), so the amount alone is a weak clue.
+- Product type C has 11.7% fraud. It is only 12% of transactions but holds about 39% of all fraud.
+- Credit cards have 6.7% fraud against 2.4% for debit cards.
+- outlook.com (9.5%) and hotmail.com (5.3%) email addresses are riskier, while att.net (0.7%) is very safe.
+
+Fraud is not steady over time. It is lowest in the first few weeks and moves between about 3% and 5% after that, so I split the data by time and check the fraud rate in each part.
+
+![Fraud rate per week](reports/figures/weekly_fraud_rate.png)
+
 ## Plan
 
 Core (2 weeks): data and EDA → time-based split → Logistic Regression baseline → XGBoost → cost-based threshold → FastAPI → Streamlit → Docker / Cloud Run.
