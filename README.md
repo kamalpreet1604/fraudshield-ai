@@ -33,13 +33,60 @@ Fraud is not steady over time. It is lowest in the first few weeks and moves bet
 
 ![Fraud rate per week](reports/figures/weekly_fraud_rate.png)
 
+## How I built the model
+
+1. **Split by time, not at random.** Train on weeks 0-17, tune on weeks 18-21 (validation), and keep weeks 22-26 (test) locked until the very end. A bank trains on the past and has to catch fraud in the future, so the test should look like the future.
+2. **Cleaned the data, learning only from train.** Dropped 12 columns that were more than 90% empty. For Logistic Regression: filled gaps with the median, added "was missing" flags (missing device info is itself a fraud clue), one-hot encoded text columns and scaled the numbers.
+3. **Baseline: Logistic Regression** with class weights, because only 3.5% of payments are fraud.
+4. **Challenger: XGBoost** with native categories, `scale_pos_weight` and early stopping on validation.
+5. **Chose the cut-off by cost, not 0.5.** Total cost = the amount of every fraud let through + $10 of review time for every alert. I tried every cut-off from 0.01 to 0.99 for both models and picked the cheapest.
+
+![Total cost by cut-off](reports/figures/cost_vs_cutoff.png)
+
+## Results
+
+**Model choice (validation weeks), each model at its own cheapest cut-off:**
+
+| | Logistic Regression | XGBoost |
+|---|---|---|
+| PR-AUC | 0.378 | **0.522** |
+| best cut-off | 0.65 | **0.45** |
+| total cost | $241,492 | **$193,196** |
+| fraud money caught | 58% | **68%** |
+| alerts | 7,199 | **6,503** |
+| real fraud in the top 100 alerts | 95% | **99%** |
+
+XGBoost wins on every count: cheaper, fewer alerts and more fraud money caught.
+
+**Final result: XGBoost at cut-off 0.45 on the test weeks (82,325 payments, scored once):**
+
+| Measure | Result |
+|---|---|
+| PR-AUC | **0.452** (a random guess scores 0.035, so about 13x better) |
+| fraud money caught | **66%** |
+| frauds caught (recall) | 64% |
+| alerts that are real fraud (precision) | 24% |
+| real fraud in the top 100 alerts | **95%** |
+| alerts sent to review | 7,482 (9% of payments) |
+
+Letting everything through would have lost about **$441,000** to fraud in these five weeks. With the model the total cost (missed fraud + review time) is **$224,306**, so it **cuts the cost roughly in half**.
+
+The test PR-AUC (0.452) is lower than validation (0.522). That's expected: validation was used to choose when to stop training and where to put the cut-off, and the test weeks are further in the future, where fraud patterns have drifted. That's why the test set stayed locked until the end.
+
+**Limits I know about:**
+- the $10 review cost is an assumption; a higher cost for annoying genuine customers would move the cut-off up
+- the cut-off was chosen on only four validation weeks
+- the most important features are Vesta's anonymous `V` columns, so the model is hard to explain in plain words
+- there is no "how unusual is this amount for this card" feature yet, which would help with big but genuine purchases
+
 ## Plan
 
-Core (2 weeks): data and EDA → time-based split → Logistic Regression baseline → XGBoost → cost-based threshold → FastAPI → Streamlit → Docker / Cloud Run.
+- [x] Week 1: data and EDA → time-based split → Logistic Regression baseline → XGBoost → cost-based cut-off → final test
+- [ ] Week 2: FastAPI + SQLite + tests → Streamlit dashboard → Docker → Cloud Run → demo video
 
-Upgrade after the core: Firestore and Pub/Sub replay.
+Upgrade after the core: Firestore and Pub/Sub replay, and a PyTorch neural network as a third model.
 
-Work in progress.
+The full work is in [`notebooks/01_eda.ipynb`](notebooks/01_eda.ipynb) and [`notebooks/02_split_and_features.ipynb`](notebooks/02_split_and_features.ipynb).
 
 ## Data
 
