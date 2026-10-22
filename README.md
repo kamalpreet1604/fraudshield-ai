@@ -135,12 +135,32 @@ uv run pytest
 
 All 7 pass.
 
+## Dashboard (Streamlit)
+
+`/docs` is fine for developers but not for a fraud analyst, so `streamlit_app.py` is a simple screen on top of the API:
+
+- **Check a payment:** a form for the amount, product, card type, email domain and device. It shows the fraud score with a green **Allow** or red **Review**.
+- **Try a real payment:** picks one of 200 real payments from the test weeks (50 fraud, 150 genuine) and sends it with all its columns, so you can see what the model does with a full payment. You can pick from any, only fraud or only genuine. The screen then shows the true answer and whether the model got it right.
+- **Recent decisions:** payments scored, how many went to review, review rate and money under review, a chart of allowed vs review, and a table of the latest payments from the SQLite history.
+
+The dashboard does not load the model itself. It calls the API, the same way a bank's own systems would, so the API has to be running.
+
+The form sends only a handful of fields, so its scores stay low. That's why I added the real-payment button: a known fraud from the test weeks, sent with all its columns, scored 94.5% and went to review.
+
+To run it, with the API already running in another terminal:
+
+```
+uv run python -m src.make_demo_sample   # once: saves the 200 test-week payments
+uv run streamlit run streamlit_app.py
+```
+
 ## Plan
 
 - [x] Week 1: data and EDA → time-based split → Logistic Regression baseline → XGBoost → cost-based cut-off → final test
 - [x] Week 2, Day 8: save the model + FastAPI service
 - [x] Week 2, Day 9: SQLite history + automatic tests
-- [ ] Week 2: Streamlit dashboard → Docker → Cloud Run → demo video
+- [x] Week 2, Day 10: Streamlit dashboard
+- [ ] Week 2: Docker → Cloud Run → demo video
 
 Upgrade after the core: Firestore and Pub/Sub replay, and a PyTorch neural network as a third model.
 
