@@ -93,7 +93,8 @@ The notebook is where I explored. To use the model outside it, I split the final
 
 The API has two endpoints:
 - `GET /health`: checks the service is up and the model file loads
-- `POST /predict`: takes a payment and returns `fraud_score`, `decision` (`review` if the score is 0.45 or higher, otherwise `allow`) and `cutoff`
+- `POST /predict`: takes a payment and returns an `id`, `fraud_score`, `decision` (`review` if the score is 0.45 or higher, otherwise `allow`) and `cutoff`
+- `GET /history`: the most recent scored payments, newest first (`?limit=` up to 500)
 
 Only `TransactionAmt` is required. Any other dataset column can be sent too, and anything left out counts as missing. A request without an amount is rejected before it reaches the model.
 
@@ -108,11 +109,38 @@ Then open http://127.0.0.1:8000/docs to try a payment in the browser.
 
 **One thing I learned testing it:** a $500 product C payment with a credit card, an outlook.com email and a mobile device scored only 2.5%, even though each of those clues is risky. I had sent 5 fields and left 400+ blank, including the `C` and `V` columns the model leans on most. A model is only as good as the data it gets at prediction time; in a real bank every payment would arrive with all its columns.
 
+## Saving every decision (SQLite)
+
+A fraud team needs to look back at what the system decided, so every scored payment is saved in a SQLite database (`data/predictions.db`, created on first use). SQLite is a whole database in one file and comes built into Python, so there is no server to set up. `src/db.py` stores the time, amount, product, fraud score and decision of each payment, and `/history` reads them back.
+
+## Tests
+
+Instead of clicking through `/docs` after every change, 7 automatic checks in `tests/test_api.py` prove the service still works:
+
+| Test | What it checks |
+|---|---|
+| health | `/health` answers `ok` |
+| score and decision | the score is between 0 and 1 and the decision is `allow` or `review` |
+| cut-off | the decision follows the 0.45 cut-off |
+| missing amount | a payment without `TransactionAmt` is rejected (422) |
+| text amount | an amount like `"hello"` is rejected (422) |
+| unseen category | an email domain the model never saw does not crash it |
+| history | scored payments are saved, newest first |
+
+Each test uses its own empty database, so the real history is never touched. Run them with (after training the model once):
+
+```
+uv run pytest
+```
+
+All 7 pass.
+
 ## Plan
 
 - [x] Week 1: data and EDA → time-based split → Logistic Regression baseline → XGBoost → cost-based cut-off → final test
 - [x] Week 2, Day 8: save the model + FastAPI service
-- [ ] Week 2: SQLite + tests → Streamlit dashboard → Docker → Cloud Run → demo video
+- [x] Week 2, Day 9: SQLite history + automatic tests
+- [ ] Week 2: Streamlit dashboard → Docker → Cloud Run → demo video
 
 Upgrade after the core: Firestore and Pub/Sub replay, and a PyTorch neural network as a third model.
 
