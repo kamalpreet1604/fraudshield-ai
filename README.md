@@ -79,10 +79,40 @@ The test PR-AUC (0.452) is lower than validation (0.522). That's expected: valid
 - the most important features are Vesta's anonymous `V` columns, so the model is hard to explain in plain words
 - there is no "how unusual is this amount for this card" feature yet, which would help with big but genuine purchases
 
+## Serving the model (FastAPI)
+
+The notebook is where I explored. To use the model outside it, I split the final steps into three files, each with one job:
+
+| File | Job | When it runs |
+|---|---|---|
+| `src/train.py` | trains XGBoost the same way as the notebook and saves it | once |
+| `src/predict.py` | loads the saved model, prepares one payment exactly like the training data, scores it | every payment |
+| `src/api.py` | FastAPI service so other programs can send a payment and get an answer | always on |
+
+`train.py` saves one file, `models/fraud_model.joblib`. It holds the model plus everything needed to prepare a new payment the same way as in training: the column order, the category lists learned from train, and the 0.45 cut-off. The retrained model reaches validation PR-AUC 0.521 (best at tree 352), matching the notebook's 0.522.
+
+The API has two endpoints:
+- `GET /health`: checks the service is up and the model file loads
+- `POST /predict`: takes a payment and returns `fraud_score`, `decision` (`review` if the score is 0.45 or higher, otherwise `allow`) and `cutoff`
+
+Only `TransactionAmt` is required. Any other dataset column can be sent too, and anything left out counts as missing. A request without an amount is rejected before it reaches the model.
+
+To run it yourself (with the data in `data/raw/`):
+
+```
+uv run python -m src.train
+uv run uvicorn src.api:app --reload
+```
+
+Then open http://127.0.0.1:8000/docs to try a payment in the browser.
+
+**One thing I learned testing it:** a $500 product C payment with a credit card, an outlook.com email and a mobile device scored only 2.5%, even though each of those clues is risky. I had sent 5 fields and left 400+ blank, including the `C` and `V` columns the model leans on most. A model is only as good as the data it gets at prediction time; in a real bank every payment would arrive with all its columns.
+
 ## Plan
 
 - [x] Week 1: data and EDA → time-based split → Logistic Regression baseline → XGBoost → cost-based cut-off → final test
-- [ ] Week 2: FastAPI + SQLite + tests → Streamlit dashboard → Docker → Cloud Run → demo video
+- [x] Week 2, Day 8: save the model + FastAPI service
+- [ ] Week 2: SQLite + tests → Streamlit dashboard → Docker → Cloud Run → demo video
 
 Upgrade after the core: Firestore and Pub/Sub replay, and a PyTorch neural network as a third model.
 
