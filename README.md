@@ -3,6 +3,8 @@
 Fraud detection and risk scoring on the IEEE-CIS Fraud Detection dataset.
 Portfolio project, not connected to any real bank.
 
+**▶ [Watch the 3-minute demo](reports/video/fraudshield_demo.mp4)**: the problem, the results, and the dashboard catching a real fraud.
+
 **In short:** an XGBoost model that scores card payments for fraud risk, with the review threshold chosen by business cost, served through a FastAPI service, a Streamlit dashboard and a Docker image.
 
 | Final test result (5 future weeks, 82,325 payments) | |
