@@ -3,6 +3,31 @@
 Fraud detection and risk scoring on the IEEE-CIS Fraud Detection dataset.
 Portfolio project, not connected to any real bank.
 
+**In short:** an XGBoost model that scores card payments for fraud risk, with the review threshold chosen by business cost, served through a FastAPI service, a Streamlit dashboard and a Docker image.
+
+| Final test result (5 future weeks, 82,325 payments) | |
+|---|---|
+| PR-AUC | **0.452** (random guess: 0.035) |
+| fraud money caught | **66%** |
+| real fraud in the top 100 alerts | **95%** |
+| total cost vs no model | **$224k vs $441k**, roughly half |
+
+**Stack:** Python, pandas, scikit-learn, XGBoost, FastAPI, SQLite, pytest, Streamlit, Docker
+
+## How the parts fit together
+
+```mermaid
+flowchart LR
+    A[Analyst<br/>Streamlit dashboard] -->|payment| B[FastAPI<br/>/predict]
+    B --> C[predict.py<br/>prepare + score]
+    C --> D[(Saved XGBoost model<br/>fraud_model.joblib)]
+    B -->|save decision| E[(SQLite<br/>history)]
+    A -->|/history| B
+    F[train.py<br/>trains once] --> D
+```
+
+The dashboard never touches the model directly: it calls the API, the same way a bank's systems would. `train.py` runs once and saves the model; after that every payment is scored in milliseconds.
+
 ## The problem
 
 Say someone's card details get stolen on a Sunday night. By Monday morning there are six online orders on it: headphones, a gift card, two phone chargers, and some more gift cards. None of them were made by the card owner. The shop ships the goods, the bank refunds the owner, and somebody has to pay for all of it.
@@ -144,6 +169,10 @@ All 7 pass.
 - **Recent decisions:** payments scored, how many went to review, review rate and money under review, a chart of allowed vs review, and a table of the latest payments from the SQLite history.
 
 The dashboard does not load the model itself. It calls the API, the same way a bank's own systems would, so the API has to be running.
+
+![Dashboard catching a real fraud](reports/figures/dashboard.png)
+
+*A real fraud from the test weeks scored 74.9% and went to review. In the history table you can also see a miss: payment #22 was fraud but scored 40.8%, just under the 0.45 cut-off. A lower cut-off would catch it, but would also send more genuine customers to review; 0.45 was chosen because it gave the lowest total cost.*
 
 The form sends only a handful of fields, so its scores stay low. That's why I added the real-payment button: a known fraud from the test weeks, sent with all its columns, scored 94.5% and went to review.
 
