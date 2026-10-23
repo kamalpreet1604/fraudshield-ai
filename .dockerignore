@@ -1,0 +1,11 @@
+# keep these out of the box: they are big, private or not needed to run the API
+.venv/
+.git/
+.pytest_cache/
+__pycache__/
+data/
+notebooks/
+reports/
+tests/
+streamlit_app.py
+*.ipynb

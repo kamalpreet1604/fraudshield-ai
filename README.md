@@ -154,13 +154,33 @@ uv run python -m src.make_demo_sample   # once: saves the 200 test-week payments
 uv run streamlit run streamlit_app.py
 ```
 
+## Docker
+
+So the API runs the same on any machine (and on Cloud Run, which only runs containers), it's packed into a Docker image with the `Dockerfile`:
+
+1. start from the official `python:3.14-slim` image, the same Python version the model was trained with
+2. copy in `uv`, then install the libraries from `uv.lock` with exact versions
+3. copy `src/` and the trained model
+4. start uvicorn on port 8080, the port Cloud Run expects
+
+Only the five libraries the API needs (FastAPI, uvicorn, pandas, scikit-learn, XGBoost) go into the image. Notebook, dashboard and test tools are in separate dependency groups, so they stay on my laptop. `.dockerignore` keeps the data, notebooks and virtual environment out. The libraries are installed before the code is copied, so after a code-only change Docker reuses the slow install step and rebuilds in seconds.
+
+```
+uv run python -m src.train                      # once, so models/ has the model
+docker build -t fraudshield-api .
+docker run --rm -p 8080:8080 fraudshield-api
+```
+
+Then open http://localhost:8080/docs. Inside the container, a $500 product C payment scored 0.0151, exactly the same as outside it.
+
 ## Plan
 
 - [x] Week 1: data and EDA → time-based split → Logistic Regression baseline → XGBoost → cost-based cut-off → final test
 - [x] Week 2, Day 8: save the model + FastAPI service
 - [x] Week 2, Day 9: SQLite history + automatic tests
 - [x] Week 2, Day 10: Streamlit dashboard
-- [ ] Week 2: Docker → Cloud Run → demo video
+- [x] Week 2, Day 11: Docker image for the API
+- [ ] Week 2: Cloud Run → demo video
 
 Upgrade after the core: Firestore and Pub/Sub replay, and a PyTorch neural network as a third model.
 

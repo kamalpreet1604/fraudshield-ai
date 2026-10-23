@@ -2,25 +2,36 @@
 name = "fraudshield-ai"
 version = "0.1.0"
 requires-python = ">=3.12"
+# only what the API needs to score payments (this is what goes in the Docker image)
 dependencies = [
     "fastapi>=0.159.1",
-    "jupyter>=1.1.1",
-    "kaggle>=2.2.4",
-    "matplotlib>=3.11.2",
     "pandas>=3.0.6",
-    "requests>=2.34.2",
     "scikit-learn>=1.9.1",
-    "seaborn>=0.13.2",
-    "streamlit>=1.66.1",
     "uvicorn>=0.54.0",
     "xgboost>=3.4.1",
 ]
 
 [dependency-groups]
+# notebooks and data download
+analysis = [
+    "jupyter>=1.1.1",
+    "kaggle>=2.2.4",
+    "matplotlib>=3.11.2",
+    "seaborn>=0.13.2",
+]
+# the Streamlit dashboard
+dashboard = [
+    "requests>=2.34.2",
+    "streamlit>=1.66.1",
+]
 dev = [
     "httpx2>=2.16.0",
     "pytest>=9.1.1",
 ]
+
+[tool.uv]
+# a plain `uv sync` on my laptop still installs everything
+default-groups = ["analysis", "dashboard", "dev"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
